@@ -1,12 +1,10 @@
-# Byte-compiled / optimized / DLL files
+# ====================================
+# Python
+# ====================================
 __pycache__/
 *.py[cod]
 *$py.class
-
-# C extensions
 *.so
-
-# Distribution / packaging
 .Python
 build/
 develop-eggs/
@@ -27,8 +25,6 @@ share/python-wheels/
 MANIFEST
 
 # PyInstaller
-#  Usually these files are written by a python script from a template
-#  before PyInstaller builds the exe, so as to inject date/other infos into it.
 *.manifest
 *.spec
 
@@ -48,6 +44,148 @@ coverage.xml
 *.cover
 *.py,cover
 .hypothesis/
+.pytest_cache/
+
+# ====================================
+# Virtual Environment
+# ====================================
+venv/
+env/
+ENV/
+.env
+.venv
+env.bak/
+venv.bak/
+
+# ====================================
+# IDE & Editor
+# ====================================
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.DS_Store
+.ropeproject
+.project
+.pydevproject
+.settings/
+*.sublime-workspace
+*.sublime-project
+
+# ====================================
+# Project Specific
+# ====================================
+# Environment variables
+.env
+!.env.example
+
+# Database
+*.db
+*.sqlite
+instance/
+
+# Uploads directory
+/uploads/
+!/uploads/.gitkeep
+
+# Logs
+logs/
+*.log
+
+# Local development
+local_settings.py
+
+# ====================================
+# OS Generated
+# ====================================
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# ====================================
+# Testing
+# ====================================
+.pytest_cache/
+.mypy_cache/
+
+# ====================================
+# Build and Release
+# ====================================
+build/
+dist/
+*.egg-info/
+
+# ====================================
+# Jupyter Notebook
+# ====================================
+.ipynb_checkpoints
+
+# ====================================
+# VS Code
+# ====================================
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+
+# ====================================
+# Windows
+# ====================================
+# Windows thumbnail cache files
+Thumbs.db
+ehthumbs.db
+
+# Folder config file
+[Dd]esktop.ini
+
+# Recycle Bin used on file shares
+$RECYCLE.BIN/
+
+# Windows Installer files
+*.cab
+*.msi
+*.msix
+*.msm
+*.msp
+
+# Windows shortcuts
+*.lnk
+
+# ====================================
+# macOS
+# ====================================
+# General
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Icon must end with two \r
+Icon
+
+# Thumbnails
+._*
+
+# Files that might appear in the root of a volume
+.DocumentRevisions-V100
+.fseventsd
+.Spotlight-V100
+.TemporaryItems
+.Trashes
+.VolumeIcon.icns
+.com.apple.timemachine.donotpresent
+
+# Directories potentially created on remote AFP share
+.AppleDB
+.AppleDesktop
+Network Trash Folder
+Temporary Items
+.apdisk
 .pytest_cache/
 cover/
 

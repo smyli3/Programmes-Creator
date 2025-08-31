@@ -1,78 +1,134 @@
+#!/usr/bin/env python3
+"""
+Main entry point for the Snowsports Program Manager application.
+
+This module initializes and runs the Flask application.
+"""
 import os
 import sys
-import webbrowser
-import threading
-import time
+import click
+from flask import current_app
 from app import create_app, db
-from app.models import Student, Group, Membership, Movement, Progress
+from app.models import User, Role
+from flask_migrate import Migrate
 
-# Add the project root to the Python path
-project_root = os.path.dirname(os.path.abspath(__file__))
-if project_root not in sys.path:
-    sys.path.insert(0, project_root)
+def make_shell_context():
+    ""
+    Create a shell context that adds database instance and models to the shell session.
+    """
+    return {
+        'db': db,
+        'User': User,
+        'Role': Role
+    }
 
-def open_browser():
-    """Open the default web browser to the app's URL."""
-    # Give the server a moment to start
-    time.sleep(1.5)
-    webbrowser.open_new('http://127.0.0.1:5000/')
+def register_commands(app):
+    ""
+    Register custom CLI commands.
+    ""
+    @app.cli.command('init-db')
+    @click.option('--admin-email', default='admin@example.com', help='Admin email')
+    @click.option('--admin-password', default=None, help='Admin password')
+    def init_db(admin_email, admin_password):
+        """Initialize the database and create an admin user."""
+        with app.app_context():
+            # Create database tables
+            db.create_all()
+            
+            # Create roles if they don't exist
+            Role.insert_roles()
+            
+            # Create admin user if it doesn't exist
+            admin = User.query.filter_by(email=admin_email).first()
+            if admin is None:
+                admin = User(
+                    username='admin',
+                    email=admin_email,
+                    confirmed=True,
+                    is_admin=True
+                )
+                if admin_password:
+                    admin.set_password(admin_password)
+                else:
+                    # Generate a random password if not provided
+                    import secrets
+                    admin_password = secrets.token_urlsafe(12)
+                    admin.set_password(admin_password)
+                
+                # Add admin role
+                admin_role = Role.query.filter_by(name='admin').first()
+                if admin_role:
+                    admin.roles.append(admin_role)
+                
+                db.session.add(admin)
+                db.session.commit()
+                
+                print(f"Created admin user with email '{admin_email}' and password '{admin_password}'")
+                print("IMPORTANT: Change this password after first login!")
+            else:
+                print(f"Admin user with email '{admin_email}' already exists.")
+    
+    @app.cli.command('create-user')
+    @click.argument('email')
+    @click.option('--username', default=None, help='Username (defaults to email prefix)')
+    @click.option('--password', default=None, help='Password (random if not provided)')
+    @click.option('--admin', is_flag=True, help='Make user an admin')
+    def create_user(email, username, password, admin):
+        """Create a new user."""
+        with app.app_context():
+            user = User.query.filter_by(email=email).first()
+            if user is not None:
+                print(f"Error: User with email '{email}' already exists.")
+                return
+            
+            if username is None:
+                username = email.split('@')[0]
+            
+            if password is None:
+                import secrets
+                password = secrets.token_urlsafe(12)
+            
+            user = User(
+                username=username,
+                email=email,
+                confirmed=True,
+                is_admin=admin
+            )
+            user.set_password(password)
+            
+            # Add user role
+            user_role = Role.query.filter_by(name='user').first()
+            if user_role:
+                user.roles.append(user_role)
+            
+            # Add admin role if requested
+            if admin:
+                admin_role = Role.query.filter_by(name='admin').first()
+                if admin_role and admin_role not in user.roles:
+                    user.roles.append(admin_role)
+            
+            db.session.add(user)
+            db.session.commit()
+            
+            print(f"Created user with email '{email}' and password '{password}'")
+            if admin:
+                print("This user has admin privileges.")
 
-def create_tables():
-    """Create database tables if they don't exist."""
-    db.create_all()
-    print("Database tables created successfully!")
+# Create the Flask application
+app = create_app(os.getenv('FLASK_ENV') or 'development')
 
-def run_development():
-    """Run the application in development mode."""
-    app = create_app('development')
-    
-    # Create database tables if they don't exist
-    with app.app_context():
-        create_tables()
-    
-    # Print debug information
-    print(f"Current working directory: {os.getcwd()}")
-    print(f"Template folder: {app.template_folder}")
-    print(f"Static folder: {app.static_folder}")
-    
-    # Ensure the upload directory exists
-    os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
-    print(f"Upload folder: {app.config['UPLOAD_FOLDER']}")
-    
-    # Verify templates exist
-    index_path = os.path.join(app.template_folder, 'index.html')
-    print(f"Looking for index.html at: {index_path}")
-    print(f"Index.html exists: {os.path.exists(index_path)}")
-    
-    # Start the browser in a separate thread
-    browser_thread = threading.Thread(target=open_browser, daemon=True)
-    browser_thread.start()
-    
-    print("\nStarting Flask development server...")
-    print(" * Running on http://127.0.0.1:5000/ (Press CTRL+C to quit)")
-    
-    # Run the application
-    app.run(debug=True, port=5000)
+# Initialize Flask-Migrate
+migrate = Migrate(app, db)
 
-def run_production():
-    """Run the application in production mode."""
-    app = create_app('production')
-    
-    # Create database tables if they don't exist
-    with app.app_context():
-        create_tables()
-    
-    # Run the application
-    port = int(os.environ.get('PORT', 5000))
-    app.run(host='0.0.0.0', port=port)
+# Register shell context
+app.shell_context_processor(make_shell_context)
+
+# Register CLI commands
+register_commands(app)
 
 if __name__ == '__main__':
-    try:
-        # Default to development mode
-        run_development()
-    except Exception as e:
-        print(f"\nError starting application: {str(e)}", file=sys.stderr)
-        if 'app' in locals():
-            print(f"Template folder: {app.template_folder}")
-            print(f"Static folder: {app.static_folder}")
-        sys.exit(1)
+    # Get port from environment variable or use default
+    port = int(os.environ.get('PORT', 5000))
+    
+    # Run the application
+    app.run(host='0.0.0.0', port=port)

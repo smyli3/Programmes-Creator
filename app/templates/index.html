@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+
+{% block title %}Home - Snowsports Program Manager{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-8 offset-md-2 text-center">
+        <h1 class="display-4 mb-4">Welcome to Snowsports Program Manager</h1>
+        <p class="lead mb-5">Manage your snowsports programs, students, and groups with ease.</p>
+        
+        <div class="row g-4">
+            <!-- Programs Card -->
+            <div class="col-md-4">
+                <div class="card h-100">
+                    <div class="card-body text-center">
+                        <div class="mb-3">
+                            <i class="fas fa-snowboarding fa-3x text-primary"></i>
+                        </div>
+                        <h5 class="card-title">Programs</h5>
+                        <p class="card-text">Create and manage your snowsports programs.</p>
+                        <a href="{{ url_for('main.programs') }}" class="btn btn-primary">View Programs</a>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Students Card -->
+            <div class="col-md-4">
+                <div class="card h-100">
+                    <div class="card-body text-center">
+                        <div class="mb-3">
+                            <i class="fas fa-users fa-3x text-success"></i>
+                        </div>
+                        <h5 class="card-title">Students</h5>
+                        <p class="card-text">Manage student information and registrations.</p>
+                        <a href="{{ url_for('main.students') }}" class="btn btn-success">View Students</a>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Groups Card -->
+            <div class="col-md-4">
+                <div class="card h-100">
+                    <div class="card-body text-center">
+                        <div class="mb-3">
+                            <i class="fas fa-users-between-lines fa-3x text-info"></i>
+                        </div>
+                        <h5 class="card-title">Groups</h5>
+                        <p class="card-text">Organize students into groups and assign instructors.</p>
+                        <a href="{{ url_for('main.groups') }}" class="btn btn-info text-white">View Groups</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Quick Actions -->
+        <div class="mt-5">
+            <h3 class="mb-4">Quick Actions</h3>
+            <div class="d-flex justify-content-center gap-3">
+                <a href="{{ url_for('main.upload_file') }}" class="btn btn-outline-primary">
+                    <i class="fas fa-upload me-2"></i>Upload Student Data
+                </a>
+                <a href="{{ url_for('main.create_program') }}" class="btn btn-outline-success">
+                    <i class="fas fa-plus me-2"></i>Create New Program
+                </a>
+                <a href="{{ url_for('main.create_group') }}" class="btn btn-outline-info">
+                    <i class="fas fa-users me-2"></i>Create New Group
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

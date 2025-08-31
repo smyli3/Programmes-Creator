@@ -1,0 +1,24 @@
+include README.md
+include requirements.txt
+include runtime.txt
+include .env.example
+include Procfile
+
+recursive-include app/templates *
+recursive-include app/static *
+recursive-include migrations *
+
+global-exclude *.py[cod]
+global-exclude __pycache__
+global-exclude *.so
+
+recursive-exclude * *.pyc *.pyo *.pyd
+prune venv
+prune env
+prune .git
+prune .github
+prune .vscode
+prune .idea
+prune node_modules
+prune .pytest_cache
+prune .mypy_cache

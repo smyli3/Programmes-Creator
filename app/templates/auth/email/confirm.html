@@ -1,0 +1,27 @@
+{% extends "auth/email/base.html" %}
+
+{% block title %}Confirm Your Email Address{% endblock %}
+
+{% block content %}
+<h2>Welcome to Snowsports Program Manager!</h2>
+<p>Hello {{ user.username }},</p>
+
+<p>Thank you for signing up! Please confirm your email address by clicking the button below:</p>
+
+<div style="text-align: center; margin: 25px 0;">
+    <a href="{{ url_for('auth.confirm', token=token, _external=True) }}" 
+       class="button" 
+       style="color: white; text-decoration: none;">
+        Confirm Email
+    </a>
+</div>
+
+<p>Or copy and paste this link into your browser:</p>
+<p class="code">{{ url_for('auth.confirm', token=token, _external=True) }}</p>
+
+<p>This link will expire in 1 hour for security reasons.</p>
+
+<p>If you didn't create an account, please ignore this email.</p>
+
+<p>Thanks,<br>The Snowsports Program Manager Team</p>
+{% endblock %}

@@ -1,0 +1,27 @@
+{% extends "auth/email/base.html" %}
+
+{% block title %}Confirm Your New Email Address{% endblock %}
+
+{% block content %}
+<h2>Confirm Your New Email Address</h2>
+<p>Hello {{ user.username }},</p>
+
+<p>You have requested to change your email address to {{ new_email }}. Please confirm this change by clicking the button below:</p>
+
+<div style="text-align: center; margin: 25px 0;">
+    <a href="{{ url_for('auth.change_email', token=token, _external=True) }}" 
+       class="button" 
+       style="color: white; text-decoration: none;">
+        Confirm Email Change
+    </a>
+</div>
+
+<p>Or copy and paste this link into your browser:</p>
+<p class="code">{{ url_for('auth.change_email', token=token, _external=True) }}</p>
+
+<p>This link will expire in 1 hour for security reasons.</p>
+
+<p>If you didn't request this change, please secure your account immediately as someone else may be trying to access it.</p>
+
+<p>Thanks,<br>The Snowsports Program Manager Team</p>
+{% endblock %}

@@ -1,11 +1,40 @@
+# ====================================
 # Core Dependencies
+# ====================================
 Flask==2.3.3
 Werkzeug==2.3.7
 Jinja2==3.1.2
 itsdangerous==2.1.2
 click==8.1.7
+MarkupSafe==2.1.3
 
+# ====================================
+# Authentication & Security
+# ====================================
+Flask-Login==0.6.2
+Flask-WTF==1.2.1
+WTForms==3.0.1
+email-validator==2.1.0
+Flask-Mail==0.9.1
+Flask-Principal==0.4.0
+Flask-Security-Too==5.3.0
+Flask-JWT-Extended==4.5.2
+passlib==1.7.4
+bcrypt==4.0.1
+PyJWT==2.8.0
+
+# ====================================
+# Database
+# ====================================
+SQLAlchemy==2.0.21
+Flask-SQLAlchemy==3.1.1
+Flask-Migrate==4.0.5
+alembic==1.13.1
+psycopg2-binary==2.9.9  # For PostgreSQL
+
+# ====================================
 # Data Processing
+# ====================================
 pandas==2.1.1
 openpyxl==3.1.2
 python-dateutil==2.8.2
@@ -13,26 +42,64 @@ pytz==2023.3.post1
 six==1.16.0
 XlsxWriter==3.1.25
 
-# Database
-SQLAlchemy==2.0.21
-alembic==1.13.1
-
-# Development
-python-dotenv==1.0.0
-Flask-SQLAlchemy==3.1.1
-Flask-Migrate==4.0.5
-Flask-WTF==1.2.1
-Flask-Login==0.6.2
-Flask-Cors==4.0.0
+# ====================================
+# Forms & Validation
+# ====================================
 WTForms==3.0.1
 email-validator==2.1.0
+Flask-WTF==1.2.1
 Flask-Bootstrap==3.3.7.1
+Flask-Bootstrap5==22.1.0
 
-# Testing
+# ====================================
+# Email
+# ====================================
+Flask-Mail==0.9.1
+blinker==1.6.2
+
+# ====================================
+# Development & Testing
+# ====================================
+python-dotenv==1.0.0
 pytest==8.0.2
 pytest-cov==4.1.0
-pytest-cov==4.1.0
+pytest-flask==1.3.0
+pytest-mock==3.11.1
+coverage==7.3.2
+black==23.11.0
+flake8==6.1.0
+isort==5.12.0
 
+# ====================================
 # Production
+# ====================================
 gunicorn==21.2.0
 whitenoise==6.5.0
+gevent==23.7.0
+
+# ====================================
+# Utilities
+# ====================================
+python-slugify==8.0.1
+Pillow==10.1.0
+python-magic==0.4.27
+python-dotenv==1.0.0
+requests==2.31.0
+
+# ====================================
+# Caching & Performance
+# ====================================
+Flask-Caching==2.1.0
+redis==5.0.1
+
+# ====================================
+# API & Documentation
+# ====================================
+Flask-RESTful==0.3.10
+Flask-API==3.1
+Flask-Swagger-UI==4.11.1
+
+# ====================================
+# File Processing
+# ====================================
+python-magic-bin==0.4.14; sys_platform == 'win32'

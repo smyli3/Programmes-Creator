@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+
+{% block title %}500 Internal Server Error{% endblock %}
+
+{% block content %}
+<div class="container text-center mt-5">
+    <div class="row">
+        <div class="col-md-8 offset-md-2">
+            <div class="error-template">
+                <h1 class="display-1 text-danger">
+                    <i class="fas fa-exclamation-triangle"></i> 500
+                </h1>
+                <h2 class="display-4">Internal Server Error</h2>
+                <div class="error-details mb-4">
+                    Oops! Something went wrong on our end. We're working to fix the issue.
+                </div>
+                <div class="alert alert-warning mb-4">
+                    <i class="fas fa-info-circle me-2"></i>
+                    The error has been logged and our team has been notified.
+                </div>
+                <div class="error-actions">
+                    <a href="{{ url_for('main.index') }}" class="btn btn-primary btn-lg me-2">
+                        <i class="fas fa-home"></i> Return Home
+                    </a>
+                    <a href="{{ url_for('main.contact') }}" class="btn btn-outline-secondary btn-lg">
+                        <i class="fas fa-envelope"></i> Contact Support
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Log error details to console for debugging
+console.error("500 Internal Server Error");
+console.error("Path: {{ request.path }}");
+</script>
+{% endblock %}

@@ -1,0 +1,84 @@
+version: '3.8'
+
+services:
+  web:
+    build: .
+    container_name: snowsports-web
+    restart: unless-stopped
+    ports:
+      - "5000:5000"
+    volumes:
+      - .:/app
+      - /app/instance
+      - /app/logs
+      - /app/uploads
+    env_file:
+      - .env
+    environment:
+      - FLASK_ENV=development
+      - DATABASE_URL=postgresql://postgres:postgres@db:5432/snowsports_dev
+    depends_on:
+      - db
+      - redis
+    command: gunicorn --bind 0.0.0.0:5000 --workers 4 --threads 2 --timeout 120 wsgi:application
+
+  db:
+    image: postgres:13-alpine
+    container_name: snowsports-db
+    restart: unless-stopped
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=snowsports_dev
+    volumes:
+      - postgres_data:/var/lib/postgresql/data/
+    ports:
+      - "5432:5432"
+
+  redis:
+    image: redis:6-alpine
+    container_name: snowsports-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+
+  celery-worker:
+    build: .
+    container_name: snowsports-celery-worker
+    command: celery -A app.celery worker --loglevel=info
+    volumes:
+      - .:/app
+    env_file:
+      - .env
+    environment:
+      - FLASK_ENV=development
+      - DATABASE_URL=postgresql://postgres:postgres@db:5432/snowsports_dev
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/0
+    depends_on:
+      - db
+      - redis
+
+  celery-beat:
+    build: .
+    container_name: snowsports-celery-beat
+    command: celery -A app.celery beat --loglevel=info
+    volumes:
+      - .:/app
+    env_file:
+      - .env
+    environment:
+      - FLASK_ENV=development
+      - DATABASE_URL=postgresql://postgres:postgres@db:5432/snowsports_dev
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/0
+    depends_on:
+      - db
+      - redis
+      - celery-worker
+
+volumes:
+  postgres_data:
+  redis_data:
