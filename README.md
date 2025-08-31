@@ -1,29 +1,24 @@
 # Snowsports Program Manager
 
-A web application for managing snowsports school programs, including student grouping, instructor assignment, and progress tracking.
+A web application for managing snowsports programs, including student registration, group management, and progress tracking.
 
 ## Features
 
-- Upload student data from CSV or Excel files
-- Automatically group students by age and ability level
-- Export groups to Excel
-- Responsive web interface
-- Easy deployment to hosting platforms
-
-## Prerequisites
-
-- Python 3.7+
-- pip (Python package manager)
+- **Student Management**: Add, edit, and manage student information
+- **Group Organization**: Automatically create and manage student groups based on skill level and age
+- **Progress Tracking**: Track student progress and make notes
+- **Data Import/Export**: Import student data from Excel/CSV and export reports
+- **Responsive Design**: Works on desktop and mobile devices
 
 ## Installation
 
 1. Clone the repository:
    ```bash
-   git clone https://github.com/yourusername/snowsports-manager.git
-   cd snowsports-manager
+   git clone https://github.com/yourusername/snowsports-program-manager.git
+   cd snowsports-program-manager
    ```
 
-2. Create a virtual environment (recommended):
+2. Create a virtual environment and activate it:
    ```bash
    python -m venv venv
    source venv/bin/activate  # On Windows: venv\Scripts\activate
@@ -34,37 +29,67 @@ A web application for managing snowsports school programs, including student gro
    pip install -r requirements.txt
    ```
 
-## Running the Application
-
-1. Start the Flask development server:
+4. Set up the database:
    ```bash
-   python app.py
+   flask db upgrade
    ```
 
-2. Open your web browser and go to:
+5. Run the application:
+   ```bash
+   python run.py
    ```
-   http://localhost:5000
-   ```
+
+6. Open your browser and navigate to `http://localhost:5000`
+
+## Configuration
+
+Create a `.env` file in the root directory with the following variables:
+
+```
+FLASK_APP=app.py
+FLASK_ENV=development
+SECRET_KEY=your-secret-key-here
+DATABASE_URL=sqlite:///app.db
+UPLOAD_FOLDER=uploads
+```
 
 ## Usage
 
-1. **Upload Data**: Click "Choose File" to upload a CSV or Excel file containing student information.
-2. **Create Groups**: Set the maximum group size and click "Create Groups" to automatically group students by age and ability.
-3. **Export**: Click "Export Groups" to download an Excel file with all groups and their members.
+1. **Home Page**: Upload a CSV or Excel file containing student information
+2. **Groups Page**: View and manage student groups, assign instructors, and track progress
+3. **Student Profile**: View and edit individual student information and notes
 
 ## File Format
 
-The application expects the input file to have the following columns (case-sensitive):
+When uploading student data, use the following format:
 
-- `CustomerName`: Student's full name
-- `BirthDate`: Date of birth (format: DD-MMM-YY, e.g., 25-Dec-15)
-- `ProductDescription_1`: Contains ability level (e.g., "Ride Tribe Late - Cardrona Ski - FT" where FT = First Timer)
-- `ParentName`: Parent/guardian name
-- `PrimaryEmergencyContact`: Emergency contact name
-- `PrimaryEmergencyPhone`: Emergency contact phone number
-- `FoodAllergy`: Any food allergies
-- `Medication`: Any medications
-- `SpecialCondition`: Any special conditions or notes
+| Column Name       | Description                           |
+|-------------------|---------------------------------------|
+| CustomerID        | Unique student identifier             |
+| CustomerName      | Student's full name                   |
+| BirthDate         | Date of birth (DD-MMM-YY)             |
+| ProductDescription_1 | Ability level (e.g., "Ski School IZ1") |
+| ParentName        | Parent/guardian name                  |
+| Email             | Contact email                         |
+| EmergencyPhone    | Emergency contact number              |
+| FoodAllergy       | Any food allergies                    |
+| DrugAllergy       | Any drug allergies                    |
+| Medication        | Current medications                   |
+| SpecialCondition  | Any special conditions or notes       |
+
+## Development
+
+To run the application in development mode:
+
+```bash
+python run.py
+```
+
+To run tests:
+
+```bash
+pytest
+```
 
 ## Deployment
 

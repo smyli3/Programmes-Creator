@@ -1,12 +1,11 @@
-<!DOCTYPE html>
+{{ ... }}
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Snowsports Program Manager</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.8.1/font/bootstrap-icons.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.14.0/Sortable.min.css">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
     <style>
         body {
             padding-top: 2rem;
@@ -34,18 +33,18 @@
     </style>
 </head>
 <body>
-    <div class="container">
-        <header class="mb-4">
-            <div class="d-flex justify-content-between align-items-center mb-3">
-                <div>
-                    <h1>Snowsports Program Manager</h1>
-                    <p class="lead mb-0">Manage multiple snowsports programs with ease</p>
-                </div>
-                <div>
-                    <button class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#programModal">
-                        <i class="bi bi-plus-lg"></i> New Program
-                    </button>
-                </div>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+        <div class="container">
+            <a class="navbar-brand" href="{{ url_for('program.index') }}">Snowsports Manager</a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav me-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('program.index') }}">Home</a>
+                    </li>
+                </ul>
             </div>
             
             <!-- Program Tabs -->

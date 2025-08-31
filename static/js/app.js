@@ -288,6 +288,92 @@ function initEventListeners() {
     });
     
     // Delete group buttons
+    // Initialize tooltips
+    var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+    var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+        return new bootstrap.Tooltip(tooltipTriggerEl);
+    });
+
+    // Initialize popovers
+    var popoverTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="popover"]'));
+    var popoverList = popoverTriggerList.map(function (popoverTriggerEl) {
+        return new bootstrap.Popover(popoverTriggerEl);
+    });
+
+    // Handle form submissions
+    const forms = document.querySelectorAll('.needs-validation');
+    Array.from(forms).forEach(form => {
+        form.addEventListener('submit', event => {
+            if (!form.checkValidity()) {
+                event.preventDefault();
+                event.stopPropagation();
+            }
+            form.classList.add('was-validated');
+        }, false);
+    });
+
+    // Handle file upload form
+    const uploadForm = document.getElementById('uploadForm');
+    if (uploadForm) {
+        uploadForm.addEventListener('submit', function(e) {
+            const fileInput = document.getElementById('fileInput');
+            const submitButton = this.querySelector('button[type="submit"]');
+            
+            if (fileInput.files.length === 0) {
+                e.preventDefault();
+                showAlert('Please select a file to upload.', 'danger');
+                return false;
+            }
+
+            // Show loading state
+            const originalButtonText = submitButton.innerHTML;
+            submitButton.disabled = true;
+            submitButton.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Processing...';
+            
+            // Reset after 30 seconds if the request takes too long
+            setTimeout(() => {
+                if (submitButton.disabled) {
+                    submitButton.disabled = false;
+                    submitButton.innerHTML = originalButtonText;
+                    showAlert('The upload is taking longer than expected. Please wait...', 'warning');
+                }
+            }, 30000);
+        });
+    }
+
+    // Handle group navigation
+    const groupTabs = document.querySelectorAll('[data-bs-toggle="tab"]');
+    groupTabs.forEach(tab => {
+        tab.addEventListener('shown.bs.tab', function (e) {
+            const target = e.target.getAttribute('data-bs-target');
+            localStorage.setItem('lastActiveTab', target);
+        });
+    });
+
+    // Restore the last active tab
+    const lastActiveTab = localStorage.getItem('lastActiveTab');
+    if (lastActiveTab) {
+        const tab = document.querySelector(`[data-bs-target="${lastActiveTab}"]`);
+        if (tab) {
+            new bootstrap.Tab(tab).show();
+        }
+    }
+
+    // Initialize drag and drop for student rows
+    initDragAndDrop();
+
+    // Group name editing
+    document.querySelectorAll('.group-name').forEach(element => {
+        element.addEventListener('blur', handleGroupNameEdit);
+        element.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                e.target.blur();
+            }
+        });
+    });
+    
+    // Delete group buttons
     document.querySelectorAll('.delete-group-btn').forEach(button => {
         button.addEventListener('click', handleDeleteGroup);
     });
@@ -301,11 +387,116 @@ function initEventListeners() {
     document.querySelectorAll('.view-notes-btn').forEach(button => {
         button.addEventListener('click', handleViewNotes);
     });
+});
+
+// Show a flash message
+document.addEventListener('DOMContentLoaded', function() {
+    // Check for flash messages in the template
+    const flashMessages = document.querySelectorAll('.alert-dismissible');
+    flashMessages.forEach(flash => {
+        setTimeout(() => {
+            const bsAlert = new bootstrap.Alert(flash);
+            bsAlert.close();
+        }, 5000);
+    });
+});
+
+// Initialize drag and drop functionality
+function initDragAndDrop() {
+    const draggables = document.querySelectorAll('.student-row');
+    const containers = document.querySelectorAll('.group-container');
+
+    draggables.forEach(draggable => {
+        draggable.addEventListener('dragstart', () => {
+            draggable.classList.add('dragging');
+        });
+
+        draggable.addEventListener('dragend', () => {
+            draggable.classList.remove('dragging');
+        });
+    });
+
+    containers.forEach(container => {
+        container.addEventListener('dragover', e => {
+            e.preventDefault();
+            const afterElement = getDragAfterElement(container, e.clientY);
+            const draggable = document.querySelector('.dragging');
+            
+            if (afterElement == null) {
+                container.appendChild(draggable);
+            } else {
+                container.insertBefore(draggable, afterElement);
+            }
+        });
+    });
+}
+
+// Helper function for drag and drop
+function getDragAfterElement(container, y) {
+    const draggableElements = [...container.querySelectorAll('.student-row:not(.dragging)')];
+
+    return draggableElements.reduce((closest, child) => {
+        const box = child.getBoundingClientRect();
+        const offset = y - box.top - box.height / 2;
+
+        if (offset < 0 && offset > closest.offset) {
+            return { offset: offset, element: child };
+        } else {
+            return closest;
+        }
+    }, { offset: Number.NEGATIVE_INFINITY }).element;
+}
+
+// Show an alert message
+function showAlert(message, type = 'info') {
+    const alertDiv = document.createElement('div');
+    alertDiv.className = `alert alert-${type} alert-dismissible fade show`;
+    alertDiv.role = 'alert';
+    alertDiv.innerHTML = `
+        ${message}
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    `;
     
-    // Initialize tooltips
-    const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
-    tooltipTriggerList.map(function (tooltipTriggerEl) {
-        return new bootstrap.Tooltip(tooltipTriggerEl);
+    const container = document.querySelector('.container') || document.body;
+    container.insertBefore(alertDiv, container.firstChild);
+    
+    // Auto-dismiss after 5 seconds
+    setTimeout(() => {
+        const bsAlert = new bootstrap.Alert(alertDiv);
+        bsAlert.close();
+    }, 5000);
+}
+
+// Handle form submission with AJAX
+function submitForm(formElement, successCallback) {
+    const formData = new FormData(formElement);
+    const url = formElement.getAttribute('action');
+    const method = formElement.getAttribute('method') || 'POST';
+    
+    fetch(url, {
+        method: method,
+        body: formData,
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            if (successCallback && typeof successCallback === 'function') {
+                successCallback(data);
+            } else if (data.redirect) {
+                window.location.href = data.redirect;
+            } else {
+                showAlert('Operation completed successfully!', 'success');
+            }
+        } else {
+            showAlert(data.message || 'An error occurred. Please try again.', 'danger');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        showAlert('An error occurred while processing your request.', 'danger');
     });
 }
 

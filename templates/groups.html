@@ -1,0 +1,289 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1>Program Groups</h1>
+        <div>
+            <a href="{{ url_for('program.index') }}" class="btn btn-outline-secondary me-2">Back to Upload</a>
+            <a href="{{ url_for('program.download_excel') }}" class="btn btn-primary">
+                <i class="bi bi-download"></i> Download Excel
+            </a>
+        </div>
+    </div>
+
+    <!-- Week Navigation -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <ul class="nav nav-tabs card-header-tabs">
+                {% for week in range(1, 7) %}
+                <li class="nav-item">
+                    <a class="nav-link {% if week == current_week %}active{% endif %}" 
+                       href="#" 
+                       onclick="loadWeek({{ week }})">
+                        Week {{ week }}
+                    </a>
+                </li>
+                {% endfor %}
+            </ul>
+        </div>
+    </div>
+
+    <!-- Groups Grid -->
+    <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4">
+        {% for group in groups %}
+        <div class="col">
+            <div class="card h-100">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">{{ group.code }}</h5>
+                    <span class="badge bg-primary">{{ group.ability }}</span>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <label class="form-label">Instructor</label>
+                        <div class="input-group">
+                            <input type="text" 
+                                   class="form-control instructor-input" 
+                                   data-group-id="{{ group.id }}" 
+                                   value="{{ group.instructor }}"
+                                   placeholder="Assign instructor">
+                            <button class="btn btn-outline-secondary save-instructor" 
+                                    type="button" 
+                                    data-group-id="{{ group.id }}">
+                                Save
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <h6 class="card-subtitle mb-2 text-muted">Students ({{ group.students|length }})</h6>
+                    <div class="list-group list-group-flush">
+                        {% for student in group.students %}
+                        <div class="list-group-item d-flex justify-content-between align-items-center student-row" 
+                             draggable="true" 
+                             data-student-id="{{ student.id }}">
+                            <div>
+                                <div class="fw-bold">{{ student.name }}</div>
+                                <small class="text-muted">ID: {{ student.customer_id }}</small>
+                            </div>
+                            <div class="dropdown">
+                                <button class="btn btn-sm btn-outline-secondary dropdown-toggle" 
+                                        type="button" 
+                                        data-bs-toggle="dropdown" 
+                                        aria-expanded="false">
+                                    Move
+                                </button>
+                                <ul class="dropdown-menu">
+                                    {% for target_group in groups %}
+                                        {% if target_group.id != group.id %}
+                                        <li>
+                                            <a class="dropdown-item move-student" 
+                                               href="#" 
+                                               data-student-id="{{ student.id }}" 
+                                               data-from-group="{{ group.code }}" 
+                                               data-to-group="{{ target_group.code }}">
+                                                {{ target_group.code }} ({{ target_group.ability }})
+                                            </a>
+                                        </li>
+                                        {% endif %}
+                                    {% endfor %}
+                                </ul>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+<!-- Move Confirmation Modal -->
+<div class="modal fade" id="moveConfirmationModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Confirm Move</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>Move <strong id="studentName"></strong> from <strong id="fromGroup"></strong> to <strong id="toGroup"></strong>?</p>
+                <div class="mb-3">
+                    <label for="moveReason" class="form-label">Reason for move (optional):</label>
+                    <textarea class="form-control" id="moveReason" rows="2"></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" id="confirmMove">Confirm Move</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // Handle instructor assignment
+    document.querySelectorAll('.save-instructor').forEach(button => {
+        button.addEventListener('click', function() {
+            const groupId = this.dataset.groupId;
+            const input = document.querySelector(`.instructor-input[data-group-id="${groupId}"]`);
+            const instructor = input.value;
+            
+            fetch('/instructors/update', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify([{
+                    code: document.querySelector(`[data-group-id="${groupId}"][data-group-code]`).dataset.groupCode,
+                    instructor: instructor
+                }])
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    showAlert('Instructor updated successfully', 'success');
+                } else {
+                    showAlert('Error updating instructor', 'danger');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                showAlert('Error updating instructor', 'danger');
+            });
+        });
+    });
+
+    // Handle student movement
+    let moveData = {};
+    
+    document.querySelectorAll('.move-student').forEach(link => {
+        link.addEventListener('click', function(e) {
+            e.preventDefault();
+            
+            moveData = {
+                studentId: this.dataset.studentId,
+                studentName: this.closest('.student-row').querySelector('.fw-bold').textContent.trim(),
+                fromGroup: this.dataset.fromGroup,
+                toGroup: this.dataset.toGroup
+            };
+            
+            document.getElementById('studentName').textContent = moveData.studentName;
+            document.getElementById('fromGroup').textContent = moveData.fromGroup;
+            document.getElementById('toGroup').textContent = moveData.toGroup;
+            document.getElementById('moveReason').value = '';
+            
+            const modal = new bootstrap.Modal(document.getElementById('moveConfirmationModal'));
+            modal.show();
+        });
+    });
+    
+    document.getElementById('confirmMove').addEventListener('click', function() {
+        const reason = document.getElementById('moveReason').value;
+        
+        fetch('/movement', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                week: {{ current_week }},
+                customer_id: moveData.studentId,
+                to_group: moveData.toGroup,
+                reason: reason || 'No reason provided',
+                entered_by: 'Current User'  // In a real app, get from auth
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === 'success') {
+                // Refresh the page to show updated groups
+                window.location.reload();
+            } else {
+                showAlert('Error moving student', 'danger');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            showAlert('Error moving student', 'danger');
+        });
+        
+        const modal = bootstrap.Modal.getInstance(document.getElementById('moveConfirmationModal'));
+        modal.hide();
+    });
+    
+    // Load data for a specific week
+    function loadWeek(week) {
+        // In a real app, this would fetch data for the selected week
+        window.location.href = `?week=${week}`;
+    }
+    
+    // Helper function to show alerts
+    function showAlert(message, type) {
+        const alertDiv = document.createElement('div');
+        alertDiv.className = `alert alert-${type} alert-dismissible fade show`;
+        alertDiv.role = 'alert';
+        alertDiv.innerHTML = `
+            ${message}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        `;
+        
+        const container = document.querySelector('.container');
+        container.insertBefore(alertDiv, container.firstChild);
+        
+        // Auto-dismiss after 3 seconds
+        setTimeout(() => {
+            const bsAlert = new bootstrap.Alert(alertDiv);
+            bsAlert.close();
+        }, 3000);
+    }
+    
+    // Initialize drag and drop
+    document.addEventListener('DOMContentLoaded', function() {
+        const draggables = document.querySelectorAll('.student-row');
+        const groups = document.querySelectorAll('.card');
+        
+        draggables.forEach(draggable => {
+            draggable.addEventListener('dragstart', () => {
+                draggable.classList.add('dragging');
+            });
+            
+            draggable.addEventListener('dragend', () => {
+                draggable.classList.remove('dragging');
+            });
+        });
+        
+        groups.forEach(group => {
+            group.addEventListener('dragover', e => {
+                e.preventDefault();
+                const afterElement = getDragAfterElement(group, e.clientY);
+                const draggable = document.querySelector('.dragging');
+                
+                if (afterElement == null) {
+                    group.appendChild(draggable);
+                } else {
+                    group.insertBefore(draggable, afterElement);
+                }
+            });
+        });
+    });
+    
+    function getDragAfterElement(container, y) {
+        const draggableElements = [...container.querySelectorAll('.student-row:not(.dragging)')];
+        
+        return draggableElements.reduce((closest, child) => {
+            const box = child.getBoundingClientRect();
+            const offset = y - box.top - box.height / 2;
+            
+            if (offset < 0 && offset > closest.offset) {
+                return { offset: offset, element: child };
+            } else {
+                return closest;
+            }
+        }, { offset: Number.NEGATIVE_INFINITY }).element;
+    }
+</script>
+{% endblock %}
