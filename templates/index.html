@@ -1,0 +1,729 @@
+{% extends "base.html" %}
+
+{% block content %}
+<!-- Hidden data for JavaScript -->
+<div id="students-data" style="display: none;">{{ students|tojson|safe if students else '{}' }}</div>
+<div id="groups-data" style="display: none;">{{ groups|tojson|safe if groups else '{}' }}</div>
+<div id="program-name" style="display: none;">{{ program.name if program else 'Snowsports Program' }}</div>
+
+{% if no_programs %}
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-md-8 text-center">
+            <div class="card">
+                <div class="card-body p-5">
+                    <h1 class="display-4 mb-4">Welcome to Snowsports Program Manager</h1>
+                    <p class="lead mb-4">Get started by creating your first program to manage your snowsports groups and students.</p>
+                    <button class="btn btn-primary btn-lg" data-bs-toggle="modal" data-bs-target="#newProgramModal">
+                        <i class="bi bi-plus-lg"></i> Create Your First Program
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% else %}
+
+<div class="container mt-4">
+    <!-- Program Tabs -->
+    <div class="d-flex align-items-center mb-3">
+        <ul class="nav nav-tabs me-3" id="programTabs" role="tablist">
+            {% for prog in programs %}
+            <li class="nav-item" role="presentation">
+                <a class="nav-link {% if prog.program_id == program.program_id %}active{% endif %}" 
+                   href="{{ url_for('index', program_id=prog.program_id) }}" 
+                   role="tab">
+                    {{ prog.name }}
+                    {% if prog.program_id != 'default' %}
+                    <button class="btn-close btn-close-tab ms-1" 
+                            onclick="event.stopPropagation(); deleteProgram('{{ prog.program_id }}')" 
+                            style="font-size: 0.5rem;"></button>
+                    {% endif %}
+                </a>
+            </li>
+            {% endfor %}
+        </ul>
+        <button class="btn btn-outline-primary btn-sm" data-bs-toggle="modal" data-bs-target="#newProgramModal">
+            <i class="bi bi-plus-lg"></i> New Program
+        </button>
+    </div>
+
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1>{{ program.name if program else 'Snowsports Program Manager' }}</h1>
+            <p class="lead mb-0">Week <span id="current-week">{{ current_week }}</span></p>
+        </div>
+        <div>
+            <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#uploadModal"
+                    {% if not program %}disabled{% endif %}>
+                <i class="bi bi-upload"></i> Upload Data
+            </button>
+            {% if groups %}
+            <div class="btn-group me-2">
+                <a href="{{ url_for('export_groups', program_id=program.program_id) }}" class="btn btn-outline-primary" id="exportBtn">
+                    <i class="bi bi-download"></i> Export
+                </a>
+                <a href="{{ url_for('export_checklist', program_id=program.program_id) }}" class="btn btn-info" target="_blank">
+                    <i class="bi bi-printer"></i> Print Checklist
+                </a>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+    
+    <!-- Search and Controls -->
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <div class="search-container position-relative">
+                <input type="text" class="form-control" id="searchInput" placeholder="Search students by name or ID...">
+                <div id="searchResults" class="search-results dropdown-menu w-100" style="display: none;"></div>
+            </div>
+        </div>
+        <div class="col-md-6 text-end">
+            <div class="btn-group" role="group">
+                {% for week in range(1, 7) %}
+                <button type="button" class="btn btn-outline-secondary week-selector" data-week="{{ week }}"
+                        {{ 'active' if loop.first else '' }}>Week {{ week }}</button>
+                {% endfor %}
+            </div>
+            <button class="btn btn-success ms-2" data-bs-toggle="modal" data-bs-target="#createGroupModal">
+                <i class="bi bi-people-fill"></i> Create Groups
+            </button>
+        </div>
+    </div>
+    
+    <!-- Groups Container -->
+    <div id="groupContainer" class="row">
+        {% if groups %}
+            {% for group_id, group in groups.items() %}
+            <div class="col-md-6 col-lg-4 mb-4">
+                <div class="card group-card" data-group-id="{{ group_id }}">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h5 class="group-name mb-0" contenteditable="true" data-group-id="{{ group_id }}">
+                            {{ group.name }}
+                        </h5>
+                        <div class="btn-group">
+                            <button class="btn btn-sm btn-outline-secondary add-note-btn" 
+                                    data-bs-toggle="tooltip" 
+                                    title="Add group note">
+                                <i class="bi bi-journal-text"></i>
+                            </button>
+                            <button class="btn btn-sm btn-outline-danger delete-group-btn" 
+                                    data-group-id="{{ group_id }}"
+                                    data-bs-toggle="tooltip" 
+                                    title="Delete group">
+                                <i class="bi bi-trash"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="card-body p-0">
+                        <div class="group-container list-group list-group-flush" data-group-id="{{ group_id }}">
+                            {% for student_id in group.student_ids %}
+                                {% set student = students.get(student_id) %}
+                                {% if student %}
+                                <div class="student-row list-group-item d-flex justify-content-between align-items-center"
+                                     data-student-id="{{ student.customer_id }}" draggable="true">
+                                    <div class="d-flex align-items-center">
+                                        <div class="me-2">
+                                            <i class="bi bi-person-circle"></i>
+                                        </div>
+                                        <div>
+                                            <div class="fw-bold">{{ student.name }}</div>
+                                            <small class="text-muted">
+                                                {{ student.ability_level }} • {{ student.age }} years
+                                            </small>
+                                        </div>
+                                    </div>
+                                    <div class="btn-group">
+                                        <button class="btn btn-sm btn-outline-primary view-notes-btn" 
+                                                data-student-id="{{ student.customer_id }}"
+                                                data-bs-toggle="tooltip" 
+                                                title="View/Add Notes">
+                                            <i class="bi bi-journal-text"></i>
+                                            {% if student.notes and student.notes|length > 0 %}
+                                            <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">
+                                                {{ student.notes|length }}
+                                            </span>
+                                            {% endif %}
+                                        </button>
+                                    </div>
+                                </div>
+                                {% endif %}
+                            {% endfor %}
+                        </div>
+                        <div class="text-center p-2 border-top">
+                            <button class="btn btn-sm btn-outline-primary add-student-btn" 
+                                    data-group-id="{{ group_id }}">
+                                <i class="bi bi-plus"></i> Add Student
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        {% else %}
+            <div class="col-12">
+                <div class="alert alert-info">
+                    <h4 class="alert-heading">No groups yet!</h4>
+                    <p>Upload a file and create groups to get started.</p>
+                    <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#uploadModal">
+                        <i class="bi bi-upload"></i> Upload Data
+                    </button>
+                </div>
+            </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- New Program Modal -->
+<div class="modal fade" id="newProgramModal" tabindex="-1" aria-labelledby="newProgramModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="newProgramModalLabel">Create New Program</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="newProgramForm">
+                    <div class="mb-3">
+                        <label for="programName" class="form-label">Program Name</label>
+                        <input type="text" class="form-control" id="programName" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="programDescription" class="form-label">Description (Optional)</label>
+                        <textarea class="form-control" id="programDescription" rows="3"></textarea>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-primary">
+                            <span class="button-text">Create Program</span>
+                            <span class="spinner-border spinner-border-sm d-none" role="status" aria-hidden="true"></span>
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Upload Modal -->
+<div class="modal fade" id="uploadModal" tabindex="-1" aria-labelledby="uploadModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="uploadModalLabel">Upload Student Data</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-success d-none" id="uploadSuccessAlert" role="alert"></div>
+                <div class="alert alert-danger d-none" id="uploadErrorAlert" role="alert"></div>
+                <form id="uploadForm" action="{{ url_for('upload_file', program_id=program.program_id) }}" method="post" enctype="multipart/form-data">
+                    <div class="mb-3">
+                        <label for="fileInput" class="form-label">Select file (CSV or Excel)</label>
+                        <input class="form-control" type="file" id="fileInput" name="file" accept=".csv,.xlsx,.xls" required>
+                    </div>
+                    <div class="form-check mb-3">
+                        <input class="form-check-input" type="checkbox" id="overwriteCheck" name="overwrite">
+                        <label class="form-check-label" for="overwriteCheck">
+                            Overwrite existing data
+                        </label>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="submit" form="uploadForm" class="btn btn-primary" id="uploadButton">
+                    <span class="button-text">Upload</span>
+                    <span class="spinner-border spinner-border-sm d-none" role="status" aria-hidden="true"></span>
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Create Groups Modal -->
+<div class="modal fade" id="createGroupModal" tabindex="-1" aria-labelledby="createGroupModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="createGroupModalLabel">Create Groups</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="createGroupForm">
+                    <div class="mb-3">
+                        <label for="maxGroupSize" class="form-label">Maximum Group Size</label>
+                        <input type="number" class="form-control" id="maxGroupSize" name="max_group_size" min="1" max="10" value="6">
+                    </div>
+                    <div class="form-check mb-3">
+                        <input class="form-check-input" type="checkbox" id="keepExistingGroups" name="keep_existing" checked>
+                        <label class="form-check-label" for="keepExistingGroups">
+                            Keep existing groups
+                        </label>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" id="createGroupsBtn">Create Groups</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endif %}
+
+{% endblock %}
+
+{% block styles %}
+<style>
+    /* Search bar styling */
+    .search-container {
+        position: relative;
+    }
+    
+    .search-results {
+        position: absolute;
+        top: 100%;
+        left: 0;
+        z-index: 1000;
+        max-height: 300px;
+        overflow-y: auto;
+        margin-top: 0.25rem;
+        background-color: #fff;
+        border: 1px solid rgba(0,0,0,.125);
+        border-radius: 0.25rem;
+        box-shadow: 0 0.5rem 1rem rgba(0,0,0,.15);
+    }
+    
+    .search-result-item {
+        cursor: pointer;
+        padding: 0.5rem 1rem;
+    }
+    
+    .search-result-item:hover {
+        background-color: #f8f9fa;
+    }
+    
+    /* Group cards */
+    .group-card {
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+        height: 100%;
+    }
+    
+    .group-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 0.5rem 1rem rgba(0,0,0,.15);
+    }
+    
+    /* Student rows */
+    .student-row {
+        cursor: move;
+        transition: background-color 0.2s ease;
+    }
+    
+    .student-row:hover {
+        background-color: #f8f9fa;
+    }
+    
+    .student-row .btn-group {
+        opacity: 0;
+        transition: opacity 0.2s ease;
+    }
+    
+    .student-row:hover .btn-group {
+        opacity: 1;
+    }
+    
+    /* Badge for notes */
+    .badge.bg-danger {
+        font-size: 0.6rem;
+        padding: 0.15em 0.4em;
+    }
+    
+    /* Week selector active state */
+    .btn-outline-secondary.active {
+        background-color: #6c757d;
+        color: #fff;
+        border-color: #6c757d;
+    }
+    
+    /* Group name editing */
+    [contenteditable="true"] {
+        padding: 0.25rem;
+        border-radius: 0.25rem;
+        outline: none;
+    }
+    
+    [contenteditable="true"]:focus {
+        background-color: #f8f9fa;
+        box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.15);
+    }
+    /* Program tabs styling */
+    .nav-tabs .nav-link {
+        color: #495057;
+        border: 1px solid transparent;
+        border-top-left-radius: 0.25rem;
+        border-top-right-radius: 0.25rem;
+        padding: 0.5rem 1rem;
+        margin-right: 0.25rem;
+    }
+    
+    .nav-tabs .nav-link.active {
+        color: #0d6efd;
+        background-color: #fff;
+        border-color: #dee2e6 #dee2e6 #fff;
+    }
+    
+    .nav-tabs .nav-link:hover:not(.active) {
+        border-color: #e9ecef #e9ecef #dee2e6;
+    }
+    
+    .btn-close-tab {
+        font-size: 0.5rem;
+        padding: 0.25rem;
+        line-height: 0.5;
+        opacity: 0.5;
+    }
+    
+    .btn-close-tab:hover {
+        opacity: 1;
+    }
+</style>
+
+<script>
+// Create a new program
+window.createProgram = function(event) {
+    console.log('=== START: createProgram function called ===');
+    event.preventDefault();
+    
+    const form = document.getElementById('newProgramForm');
+    console.log('Form element:', form);
+    
+    const nameInput = document.getElementById('programName');
+    const descriptionInput = document.getElementById('programDescription');
+    const submitButton = form ? form.querySelector('button[type="submit"]') : null;
+    
+    console.log('Input elements:', { nameInput, descriptionInput, submitButton });
+    
+    if (!form || !nameInput || !descriptionInput || !submitButton) {
+        console.error('Required elements not found:', { 
+            formExists: !!form,
+            nameInputExists: !!nameInput,
+            descriptionInputExists: !!descriptionInput,
+            submitButtonExists: !!submitButton 
+        });
+        alert('Error: Form elements not found. Please refresh the page and try again.');
+        return;
+    }
+    
+    const spinner = submitButton.querySelector('.spinner-border');
+    const buttonText = submitButton.querySelector('.button-text');
+    
+    // Show loading state
+    submitButton.disabled = true;
+    if (spinner) spinner.classList.remove('d-none');
+    if (buttonText) buttonText.textContent = 'Creating...';
+    
+    // Get form values
+    const name = nameInput.value.trim();
+    const description = descriptionInput.value.trim();
+    
+    if (!name) {
+        alert('Please enter a program name');
+        nameInput.focus();
+        submitButton.disabled = false;
+        if (spinner) spinner.classList.add('d-none');
+        if (buttonText) buttonText.textContent = 'Create Program';
+        return;
+    }
+    
+    console.log('Preparing to create program with:', { name, description });
+    
+    // Prepare the request data
+    const requestData = {
+        name: name,
+        description: description
+    };
+    
+    console.log('Sending POST request to /api/programs with data:', requestData);
+    
+    // Show loading state
+    submitButton.disabled = true;
+    if (spinner) spinner.classList.remove('d-none');
+    if (buttonText) buttonText.textContent = 'Creating...';
+    
+    // Make the API call
+    fetch('/api/programs', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json'
+        },
+        body: JSON.stringify(requestData),
+        credentials: 'same-origin'  // Ensure cookies are sent with the request
+    })
+    .then(response => response.json())
+    .then(data => {
+        console.log('Response data:', data);
+        
+        if (!data.success) {
+            throw new Error(data.message || 'Failed to create program');
+        }
+        
+        // Close the modal
+        const modal = bootstrap.Modal.getInstance(document.getElementById('newProgramModal'));
+        if (modal) {
+            console.log('Hiding the modal');
+            modal.hide();
+        } else {
+            console.warn('Could not find modal to hide');
+        }
+        
+        // Clear the form
+        form.reset();
+        
+        // Redirect to the new program
+        if (data.program && data.program.program_id) {
+            window.location.href = `/?program_id=${data.program.program_id}`;
+        } else {
+            window.location.reload();
+        }
+    })
+    .catch(error => {
+        console.error('Error in createProgram:', error);
+        alert(`Error: ${error.message || 'Failed to create program'}`);
+    })
+    .finally(() => {
+        console.log('Cleaning up createProgram');
+        // Reset button state
+        if (submitButton) {
+            submitButton.disabled = false;
+            if (spinner) spinner.classList.add('d-none');
+            if (buttonText) buttonText.textContent = 'Create Program';
+        }
+        
+        console.log('=== END: createProgram function ===');
+    });
+}
+
+// Delete a program
+function deleteProgram(programId) {
+    if (!confirm('Are you sure you want to delete this program? This action cannot be undone.')) {
+        return;
+    }
+    
+    fetch(`/api/programs/${programId}`, {
+        method: 'DELETE',
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // Reload the page to show the updated program list
+            window.location.href = '/';
+        } else {
+            alert(`Error: ${data.message}`);
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('An error occurred while deleting the program');
+    });
+}
+
+// Handle create groups form submission
+function handleCreateGroups() {
+    const programId = new URLSearchParams(window.location.search).get('program_id');
+    if (!programId) {
+        alert('No program selected');
+        return;
+    }
+    
+    const form = document.getElementById('createGroupForm');
+    const formData = new FormData(form);
+    formData.append('program_id', programId);
+    
+    // Show loading state
+    const createBtn = document.getElementById('createGroupsBtn');
+    const originalBtnText = createBtn.innerHTML;
+    createBtn.disabled = true;
+    createBtn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Creating...';
+    
+    fetch('/create_groups', {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // Close the modal and reload the page
+            const modal = bootstrap.Modal.getInstance(document.getElementById('createGroupModal'));
+            modal.hide();
+            window.location.reload();
+        } else {
+            alert('Error: ' + data.message);
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('An error occurred while creating groups');
+    })
+    .finally(() => {
+        createBtn.disabled = false;
+        createBtn.innerHTML = originalBtnText;
+    });
+}
+
+// Function to handle file upload form submission
+function handleFileUpload(event) {
+    event.preventDefault();
+    const form = event.target;
+    const formData = new FormData(form);
+    const uploadBtn = form.querySelector('button[type="submit"]');
+    const spinner = uploadBtn.querySelector('.spinner-border') || document.createElement('span');
+    const buttonText = uploadBtn.querySelector('.button-text') || uploadBtn;
+    
+    if (!spinner.classList) {
+        spinner.className = 'spinner-border spinner-border-sm';
+        spinner.role = 'status';
+        spinner.ariaHidden = 'true';
+    }
+    
+    // Show loading state
+    uploadBtn.disabled = true;
+    if (buttonText !== uploadBtn) {
+        buttonText.textContent = 'Uploading...';
+        if (!uploadBtn.contains(spinner)) {
+            uploadBtn.insertBefore(spinner, buttonText);
+        }
+        spinner.classList.remove('d-none');
+    } else {
+        uploadBtn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Uploading...';
+    }
+
+    fetch(form.action, {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => {
+        if (!response.ok) {
+            return response.text().then(text => {
+                try {
+                    return Promise.reject(JSON.parse(text).message || 'Upload failed');
+                } catch (e) {
+                    return Promise.reject(text || 'Upload failed');
+                }
+            });
+        }
+        return response.json();
+    })
+    .then(data => {
+        if (data && data.success) {
+            // Show success message
+            const successAlert = document.getElementById('uploadSuccessAlert');
+            if (successAlert) {
+                successAlert.textContent = data.message || 'File uploaded successfully';
+                successAlert.classList.remove('d-none');
+                
+                // Hide the message after 5 seconds
+                setTimeout(() => {
+                    successAlert.classList.add('d-none');
+                }, 5000);
+            }
+            
+            // Close the modal
+            const modal = bootstrap.Modal.getInstance(document.getElementById('uploadModal'));
+            if (modal) {
+                modal.hide();
+            }
+            
+            // Reload the page to show updated data
+            window.location.reload();
+        } else {
+            throw new Error(data ? (data.message || 'Upload failed') : 'No data received');
+        }
+    })
+    .catch(error => {
+        console.error('Upload error:', error);
+        
+        // Show error message
+        const errorAlert = document.getElementById('uploadErrorAlert');
+        if (errorAlert) {
+            errorAlert.textContent = error.message || 'Failed to upload file';
+            errorAlert.classList.remove('d-none');
+            
+            // Hide the message after 5 seconds
+            setTimeout(() => {
+                errorAlert.classList.add('d-none');
+            }, 5000);
+        } else {
+            alert(`Error: ${error.message || 'Failed to upload file'}`);
+        }
+    })
+    .finally(() => {
+        // Reset button state
+        if (uploadBtn) {
+            uploadBtn.disabled = false;
+            if (buttonText !== uploadBtn) {
+                buttonText.textContent = 'Upload File';
+                spinner.classList.add('d-none');
+            } else {
+                uploadBtn.innerHTML = 'Upload File';
+            }
+        }
+        
+        // Reset the form to allow re-uploading the same file
+        if (form) {
+            form.reset();
+        }
+    });
+}
+
+// Initialize the page
+document.addEventListener('DOMContentLoaded', function() {
+    // Initialize the program creation form
+    const newProgramForm = document.getElementById('newProgramForm');
+    if (newProgramForm) {
+        newProgramForm.addEventListener('submit', window.createProgram);
+    }
+    
+    // Initialize tooltips
+    const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+    tooltipTriggerList.map(function (tooltipTriggerEl) {
+        return new bootstrap.Tooltip(tooltipTriggerEl);
+    });
+    
+    // Add event listener for create groups button
+    const createGroupsBtn = document.getElementById('createGroupsBtn');
+    if (createGroupsBtn) {
+        createGroupsBtn.addEventListener('click', handleCreateGroups);
+    }
+    
+    // Add event listener for file upload form
+    const uploadForm = document.getElementById('uploadForm');
+    if (uploadForm) {
+        uploadForm.addEventListener('submit', function(event) {
+            event.preventDefault();
+            handleFileUpload(event);
+            return false;
+        });
+    }
+    
+    // Remove the duplicate event listener since we're already using onsubmit in the form
+    // The form's onsubmit="createProgram(event); return false;" is sufficient
+    
+    // Update export button to include program ID
+    const exportBtn = document.querySelector('a[href$="export_groups"]');
+    if (exportBtn) {
+        const programId = new URLSearchParams(window.location.search).get('program_id');
+        if (programId) {
+            exportBtn.href = `/export_groups?program_id=${encodeURIComponent(programId)}`;
+        }
+    }
+});
+</script>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/app.js') }}"></script>
+{% endblock %}
