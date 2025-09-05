@@ -1,7 +1,8 @@
-from flask import render_template, request, redirect, url_for, flash, jsonify, send_file
+from flask import render_template, request, redirect, url_for, flash, jsonify, send_file, current_app
 from flask_login import login_required, current_user
+from . import main
 from .. import db
-from ..models import Student, Group, Program, Movement
+from ..models import Student, Group, Program, Movement, Membership
 from ..snowsports_manager import SnowsportsManager
 import os
 from werkzeug.utils import secure_filename
@@ -15,8 +16,65 @@ manager = SnowsportsManager()
 @main.route('/')
 def index():
     """Home page with program overview."""
-    programs = Program.query.all()
-    return render_template('index.html', programs=programs)
+    try:
+        from ..models import Program, Group, Student, Membership
+        
+        programs = Program.query.filter_by(active=True).order_by(Program.name).all()
+        groups = {}
+        students = {}
+        program = None
+        no_programs = len(programs) == 0
+        
+        # If there are programs, get the first one by default
+        if programs:
+            program = programs[0]
+            
+            # Get all groups for the program with student counts
+            groups = {}
+            for group in program.groups.all():
+                # Get active memberships for this group
+                student_count = Membership.query.filter_by(
+                    group_id=group.id, 
+                    is_active=True
+                ).count()
+                
+                groups[str(group.id)] = {
+                    'id': group.id,
+                    'name': group.name,
+                    'instructor': group.instructor if hasattr(group, 'instructor') else None,
+                    'notes': group.notes if hasattr(group, 'notes') else None,
+                    'student_count': student_count
+                }
+            
+            # Get all students in the program with their group assignments
+            students = {}
+            for student in program.students.all():
+                # Get active membership for this student
+                membership = Membership.query.filter_by(
+                    student_id=student.id,
+                    is_active=True
+                ).first()
+                
+                students[str(student.id)] = {
+                    'id': student.id,
+                    'name': student.name,
+                    'ability_level': student.ability_level,
+                    'group_id': str(membership.group_id) if membership else None
+                }
+        
+        return render_template(
+            'index.html',
+            programs=programs,
+            program=program,
+            groups=groups,
+            students=students,
+            no_programs=no_programs
+        )
+        
+    except Exception as e:
+        current_app.logger.error(f"Error in index route: {str(e)}", exc_info=True)
+        # Return a minimal template with just the error message
+        return render_template('error.html', error=str(e)), 500
 
 @main.route('/upload', methods=['GET', 'POST'])
 @login_required

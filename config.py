@@ -13,7 +13,11 @@ class Config:
     SECURITY_PASSWORD_SALT = os.environ.get('SECURITY_PASSWORD_SALT') or 'change-this-in-production'
     
     # Database
-    SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL') or \
+    # Normalize legacy postgres:// URLs used by some providers
+    _database_url = os.environ.get('DATABASE_URL')
+    if _database_url and _database_url.startswith('postgres://'):
+        _database_url = _database_url.replace('postgres://', 'postgresql://', 1)
+    SQLALCHEMY_DATABASE_URI = _database_url or \
         'sqlite:///' + os.path.join(basedir, 'app.db')
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     SQLALCHEMY_RECORD_QUERIES = True

@@ -13,7 +13,7 @@ from app.models import User, Role
 from flask_migrate import Migrate
 
 def make_shell_context():
-    ""
+    """
     Create a shell context that adds database instance and models to the shell session.
     """
     return {
@@ -23,9 +23,9 @@ def make_shell_context():
     }
 
 def register_commands(app):
-    ""
+    """
     Register custom CLI commands.
-    ""
+    """
     @app.cli.command('init-db')
     @click.option('--admin-email', default='admin@example.com', help='Admin email')
     @click.option('--admin-password', default=None, help='Admin password')

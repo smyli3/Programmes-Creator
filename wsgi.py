@@ -26,8 +26,12 @@ from app import create_app
 # Set the default environment to production for safety
 os.environ.setdefault('FLASK_ENV', 'production')
 
-# Create the application instance
-application = create_app()
+# Create the application instance with appropriate config
+# Prefer explicit FLASK_CONFIG, otherwise use production when FLASK_ENV=production
+flask_config = os.environ.get('FLASK_CONFIG')
+if not flask_config:
+    flask_config = 'production' if os.environ.get('FLASK_ENV') == 'production' else 'default'
+application = create_app(flask_config)
 
 # Configure logging for production
 if not application.debug and not application.testing:

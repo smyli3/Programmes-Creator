@@ -5,7 +5,7 @@ from . import auth
 from .. import db
 from ..models import User
 from ..email import send_email
-from .forms import LoginForm, RegistrationForm, ResetPasswordRequestForm, ResetPasswordForm
+from .forms import LoginForm, RegistrationForm, PasswordResetRequestForm, PasswordResetForm
 
 @auth.before_app_request
 def before_request():

@@ -1,17 +1,11 @@
 from flask import Flask, render_template, request, redirect, url_for, flash, send_file, jsonify
 from flask_cors import CORS
+from flask_login import LoginManager, UserMixin, current_user, login_user, logout_user, login_required
+from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.utils import secure_filename
 from functools import wraps
 
-# Simple login decorator for demonstration
-# In a real app, use Flask-Login or similar
-def login_required(f):
-    @wraps(f)
-    def decorated_function(*args, **kwargs):
-        # Add your authentication logic here
-        # For now, just allow all requests
-        return f(*args, **kwargs)
-    return decorated_function
+# We'll use Flask-Login's @login_required decorator instead of our own
 import pandas as pd
 from datetime import datetime
 import os
@@ -24,6 +18,67 @@ CORS(app)  # Enable CORS for all routes
 app.secret_key = 'your-secret-key-here'  # Change this to a secure secret key
 app.config['UPLOAD_FOLDER'] = 'uploads'
 app.config['ALLOWED_EXTENSIONS'] = {'csv', 'xlsx', 'xls'}
+
+# Initialize Flask-Login
+login_manager = LoginManager()
+login_manager.init_app(app)
+login_manager.login_view = 'login'
+
+# Simple user model
+class User(UserMixin):
+    def __init__(self, id):
+        self.id = id
+        self.is_authenticated = True
+        self.is_active = True
+        self.is_anonymous = False
+
+    def get_id(self):
+        return str(self.id)
+
+# This would typically be a database lookup
+users = {'1': {'username': 'admin', 'password': generate_password_hash('admin')}}
+
+# Login route
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    if request.method == 'POST':
+        username = request.form.get('username')
+        password = request.form.get('password')
+        
+        # In a real app, validate against database
+        user_id = None
+        for uid, user in users.items():
+            if user['username'] == username and check_password_hash(user['password'], password):
+                user_id = uid
+                break
+                
+        if user_id:
+            user = User(user_id)
+            login_user(user)
+            return redirect(url_for('index'))
+            
+        flash('Invalid username or password')
+        
+    return '''
+        <form method="post">
+            <p><input type=text name=username placeholder="Username">
+            <p><input type=password name=password placeholder="Password">
+            <p><input type=submit value=Login>
+        </form>
+    '''
+
+# Logout route
+@app.route('/logout')
+@login_required
+def logout():
+    logout_user()
+    return redirect(url_for('index'))
+
+@login_manager.user_loader
+def load_user(user_id):
+    if user_id in users:
+        return User(user_id)
+    return None
 
 # Ensure upload folder exists
 os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
@@ -476,11 +531,14 @@ def api_delete_program(program_id):
 @app.route('/')
 @login_required
 def index():
+    if not current_user.is_authenticated:
+        return redirect(url_for('login'))
+        
     program_id = request.args.get('program_id')
     
     # If no programs exist, show the new program modal
     if not manager.programs:
-        return render_template('index.html', no_programs=True)
+        return render_template('index.html', no_programs=True, current_user=current_user)
         
     # If program_id is not provided but programs exist, use the first one
     if not program_id:

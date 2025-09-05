@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header bg-danger text-white">
+                    <h4 class="mb-0">Error</h4>
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-danger">
+                        <h5 class="alert-heading">An error occurred</h5>
+                        <p class="mb-0">{{ error }}</p>
+                    </div>
+                    <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                        <a href="{{ url_for('main.index') }}" class="btn btn-primary">Return to Home</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

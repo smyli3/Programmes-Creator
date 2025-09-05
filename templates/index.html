@@ -25,29 +25,6 @@
 {% else %}
 
 <div class="container mt-4">
-    <!-- Program Tabs -->
-    <div class="d-flex align-items-center mb-3">
-        <ul class="nav nav-tabs me-3" id="programTabs" role="tablist">
-            {% for prog in programs %}
-            <li class="nav-item" role="presentation">
-                <a class="nav-link {% if prog.program_id == program.program_id %}active{% endif %}" 
-                   href="{{ url_for('index', program_id=prog.program_id) }}" 
-                   role="tab">
-                    {{ prog.name }}
-                    {% if prog.program_id != 'default' %}
-                    <button class="btn-close btn-close-tab ms-1" 
-                            onclick="event.stopPropagation(); deleteProgram('{{ prog.program_id }}')" 
-                            style="font-size: 0.5rem;"></button>
-                    {% endif %}
-                </a>
-            </li>
-            {% endfor %}
-        </ul>
-        <button class="btn btn-outline-primary btn-sm" data-bs-toggle="modal" data-bs-target="#newProgramModal">
-            <i class="bi bi-plus-lg"></i> New Program
-        </button>
-    </div>
-
     <div class="d-flex justify-content-between align-items-center mb-4">
         <div>
             <h1>{{ program.name if program else 'Snowsports Program Manager' }}</h1>

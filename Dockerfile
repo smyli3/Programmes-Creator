@@ -21,8 +21,6 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy project
 COPY . .
 
-# Collect static files (if using Flask-Collect)
-RUN if [ -f "manage.py" ]; then python manage.py collectstatic --noinput; fi
 
 # Create necessary directories
 RUN mkdir -p /app/logs /app/uploads
