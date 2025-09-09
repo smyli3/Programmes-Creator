@@ -1,0 +1,206 @@
+{% extends "base.html" %}
+
+{% block title %}Weekly Groups - {{ program.name }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-3">
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <h2 class="mb-0">{{ program.name }} • Week {{ current_week }}</h2>
+    <div class="d-flex gap-2 align-items-center">
+      <form class="d-flex align-items-center gap-2" method="post" action="{{ url_for('main.generate_groups_weekly', program_id=program.id) }}">
+        <input type="hidden" name="week_number" value="{{ current_week }}" />
+        <div class="input-group input-group-sm" style="width: 200px;">
+          <span class="input-group-text">Max Size</span>
+          <input type="number" class="form-control" name="max_size" value="8" min="2" max="20" />
+        </div>
+        <button type="submit" class="btn btn-success btn-sm">Generate Weekly Groups</button>
+      </form>
+      <a class="btn btn-outline-secondary btn-sm" href="{{ url_for('main.programs') }}">Back to Programs</a>
+      <form class="d-inline" method="post" action="{{ url_for('main.advance_program_week', program_id=program.id) }}">
+        <button type="submit" class="btn btn-primary btn-sm">Advance Week</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Week Navigation -->
+  <ul class="nav nav-tabs mb-3">
+    {% for week in available_weeks %}
+      <li class="nav-item">
+        <a class="nav-link {% if week == current_week %}active{% endif %}"
+           href="{{ url_for('main.groups_weekly_view', program_id=program.id, week_number=week) }}">
+          Week {{ week }}
+        </a>
+      </li>
+    {% endfor %}
+  </ul>
+
+  <div class="row g-3">
+    <!-- Groups -->
+    <div class="col-lg-9">
+      <div class="row g-3">
+        {% for item in groups_data %}
+          {% set group = item.group %}
+          {% set weekly_name = item.weekly_name %}
+          {% set members = item.members %}
+          <div class="col-md-6">
+            <div class="card h-100">
+              <div class="card-header d-flex justify-content-between align-items-center">
+                <div class="d-flex align-items-center gap-2">
+                  <strong contenteditable="true" class="js-weekly-name"
+                          data-group-id="{{ group.id }}"
+                          data-week="{{ current_week }}">
+                    {{ weekly_name }}
+                  </strong>
+                  <span class="badge bg-info text-dark">{{ members|length }}/{{ group.max_size or 8 }}</span>
+                </div>
+                <div class="d-flex align-items-center gap-2">
+                  <select class="form-select form-select-sm js-instructor"
+                          data-group-id="{{ group.id }}" data-week="{{ current_week }}">
+                    <option value="">Instructor</option>
+                    {% if instructors %}
+                      {% for inst in instructors %}
+                        <option value="{{ inst.id }}">{{ inst.username }}</option>
+                      {% endfor %}
+                    {% endif %}
+                  </select>
+                </div>
+              </div>
+              <div class="card-body p-0">
+                <ul class="list-group list-group-flush group-container" data-group-id="{{ group.id }}">
+                  {% for m in members %}
+                    {% set st = m.student %}
+                    <li class="list-group-item d-flex justify-content-between align-items-center student-row"
+                        draggable="true"
+                        data-student-id="{{ m.student_id }}">
+                      <div class="d-flex flex-column">
+                        <span class="fw-semibold">{{ st.name }}</span>
+                        <div class="mt-1 d-flex gap-2 align-items-center">
+                          {# Age badge #}
+                          {% if st.age is not none %}
+                            <span class="badge rounded-pill bg-secondary">Age {{ st.age }}</span>
+                          {% endif %}
+                          {# Ability badge with simple color mapping #}
+                          {% set abl = (st.ability_level or 'Unknown') %}
+                          {% set cls = 'bg-light text-dark' %}
+                          {% if abl %}
+                            {% set u = abl|string|upper %}
+                            {% if u.startswith('FT') %}{% set cls = 'bg-success' %}
+                            {% elif u.startswith('BZ1') %}{% set cls = 'bg-info text-dark' %}
+                            {% elif u.startswith('BZ2') %}{% set cls = 'bg-primary' %}
+                            {% elif u.startswith('IZ') %}{% set cls = 'bg-warning text-dark' %}
+                            {% elif u.startswith('AZ') %}{% set cls = 'bg-danger' %}
+                            {% endif %}
+                          {% endif %}
+                          <span class="badge rounded-pill {{ cls }}">{{ abl }}</span>
+                        </div>
+                      </div>
+                    </li>
+                  {% endfor %}
+                </ul>
+              </div>
+            </div>
+          </div>
+        {% endfor %}
+      </div>
+    </div>
+
+    <!-- Unassigned -->
+    <div class="col-lg-3">
+      <div class="card h-100">
+        <div class="card-header d-flex justify-content-between align-items-center">
+          <strong>Unassigned (Week {{ current_week }})</strong>
+          <span class="badge bg-secondary">{{ unassigned_students|length }}</span>
+        </div>
+        <div class="card-body p-0">
+          <ul class="list-group list-group-flush">
+            {% for s in unassigned_students %}
+              <li class="list-group-item student-row" draggable="true" data-student-id="{{ s.id }}">
+                <div class="d-flex justify-content-between">
+                  <span>{{ s.name }}</span>
+                  <small class="text-muted">{{ s.ability_level or 'Unknown' }}</small>
+                </div>
+              </li>
+            {% endfor %}
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Inline helpers for weekly rename and instructor assignment
+function renameGroup(groupId, week, name) {
+  return fetch(`/api/groups/${groupId}/rename`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ week_number: week, name })
+  });
+}
+function assignInstructor(groupId, week, instructorId) {
+  return fetch(`/api/groups/${groupId}/assign_instructor`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ week_number: week, instructor_id: instructorId || null })
+  });
+}
+function moveStudent(studentId, week, groupId) {
+  return fetch(`/api/students/${studentId}/move`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ week_number: week, group_id: groupId })
+  });
+}
+
+// Rename on blur
+document.querySelectorAll('.js-weekly-name').forEach(el => {
+  el.addEventListener('blur', async (e) => {
+    const groupId = e.target.dataset.groupId;
+    const week = parseInt(e.target.dataset.week, 10);
+    const name = e.target.textContent.trim();
+    if (!name) return;
+    try { await renameGroup(groupId, week, name); } catch (err) { console.error(err); }
+  });
+});
+
+// Assign instructor on change
+document.querySelectorAll('.js-instructor').forEach(sel => {
+  sel.addEventListener('change', async (e) => {
+    const groupId = e.target.dataset.groupId;
+    const week = parseInt(e.target.dataset.week, 10);
+    const val = e.target.value || null;
+    try { await assignInstructor(groupId, week, val); } catch (err) { console.error(err); }
+  });
+});
+
+// Basic drag/drop between groups
+let draggedStudent = null;
+
+document.querySelectorAll('.student-row').forEach(row => {
+  row.addEventListener('dragstart', (e) => {
+    draggedStudent = e.currentTarget;
+    e.dataTransfer.effectAllowed = 'move';
+  });
+});
+
+document.querySelectorAll('.group-container').forEach(list => {
+  list.addEventListener('dragover', (e) => { e.preventDefault(); });
+  list.addEventListener('drop', async (e) => {
+    e.preventDefault();
+    if (!draggedStudent) return;
+    const studentId = draggedStudent.dataset.studentId;
+    const targetGroupId = e.currentTarget.dataset.groupId;
+    const week = {{ current_week }};
+    try {
+      const res = await moveStudent(studentId, week, targetGroupId);
+      if (res.ok) {
+        e.currentTarget.appendChild(draggedStudent);
+      }
+    } catch (err) { console.error(err); }
+    draggedStudent = null;
+  });
+});
+</script>
+{% endblock %}

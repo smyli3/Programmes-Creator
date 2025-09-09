@@ -1,24 +1,8 @@
 import os
-from flask import Flask, render_template
 import click
-from flask_mail import Mail
-from flask_migrate import Migrate
-from flask_login import LoginManager
-from flask_bootstrap import Bootstrap
-from flask_sqlalchemy import SQLAlchemy
-from flask_wtf.csrf import CSRFProtect
+from flask import Flask, render_template
+from .extensions import db, migrate, login_manager, csrf, mail
 from config import config
-
-# Initialize extensions
-db = SQLAlchemy()
-migrate = Migrate()
-login_manager = LoginManager()
-login_manager.login_view = 'auth.login'
-login_manager.login_message = 'Please log in to access this page.'
-login_manager.login_message_category = 'info'
-bootstrap = Bootstrap()
-mail = Mail()
-csrf = CSRFProtect()
 
 def create_db():
     """Create database tables."""
@@ -100,15 +84,18 @@ def register_cli(app):
             if admin:
                 click.echo("This user has admin privileges.")
 
-def create_app(config_name='default'):
+def create_app(config_name=None):
     """Create and configure the Flask application."""
-    app = Flask(__name__, 
-               template_folder='../templates',
-               static_folder='../static')
+    # Templates live in app/templates; static assets in project-root 'static/'
+    app = Flask(__name__, static_folder='../static')
     
-    # Load configuration
-    app.config.from_object(config[config_name])
-    config[config_name].init_app(app)
+    # Load configuration class
+    cfg_name = config_name or os.getenv('FLASK_CONFIG') or ('production' if os.getenv('FLASK_ENV') == 'production' else 'default')
+    cfg_class = config.get(cfg_name, config['default'])
+    app.config.from_object(cfg_class)
+    # Run any config-specific initialization
+    if hasattr(cfg_class, 'init_app'):
+        cfg_class.init_app(app)
     
     # Ensure the instance folder exists
     try:
@@ -120,18 +107,19 @@ def create_app(config_name='default'):
     db.init_app(app)
     migrate.init_app(app, db)
     login_manager.init_app(app)
-    bootstrap.init_app(app)
-    mail.init_app(app)
     csrf.init_app(app)
+    mail.init_app(app)
+    login_manager.login_view = 'auth.login'
+    login_manager.login_message = 'Please log in to access this page.'
+    login_manager.login_message_category = 'info'
     # Register CLI commands
     register_cli(app)
     
-    # Register blueprints
-    from .main import main as main_blueprint
-    app.register_blueprint(main_blueprint)
-    
-    from .auth import auth as auth_blueprint
-    app.register_blueprint(auth_blueprint, url_prefix='/auth')
+    # Register blueprints (guide style: bp objects)
+    from .main import bp as main_bp
+    app.register_blueprint(main_bp)
+    from .auth import bp as auth_bp
+    app.register_blueprint(auth_bp, url_prefix='/auth')
     
     # Error handlers
     @app.errorhandler(403)
@@ -147,25 +135,36 @@ def create_app(config_name='default'):
         db.session.rollback()
         return render_template('errors/500.html'), 500
     
-    # Make programs available to all templates
-    @app.context_processor
-    def inject_programs():
-        from .models import Program
-        return dict(programs=Program.query.all())
-    
-    # Shell context
+    # Shell context (minimal)
     @app.shell_context_processor
     def make_shell_context():
         from .models import User, Role
-        return {
-            'db': db,
-            'User': User,
-            'Role': Role,
-            'Program': Program,
-            'create_db': create_db,
-            'drop_db': drop_db
-        }
+        return {'db': db, 'User': User, 'Role': Role}
     
+    # Global template context
+    @app.context_processor
+    def inject_now():
+        from datetime import datetime
+        return {'now': datetime.utcnow()}
+    
+    # Ensure minimal schema columns exist at runtime (dev safety for SQLite)
+    try:
+        from sqlalchemy import text
+        with app.app_context():
+            cols = [row['name'] for row in db.session.execute(text("PRAGMA table_info('groups')")).mappings().all()]
+            if 'created_at' not in cols:
+                db.session.execute(text("ALTER TABLE groups ADD COLUMN created_at DATETIME"))
+                db.session.execute(text("UPDATE groups SET created_at = CURRENT_TIMESTAMP WHERE created_at IS NULL"))
+                db.session.commit()
+            if 'max_size' not in cols:
+                db.session.execute(text("ALTER TABLE groups ADD COLUMN max_size INTEGER DEFAULT 8"))
+                db.session.execute(text("UPDATE groups SET max_size = 8 WHERE max_size IS NULL"))
+                db.session.commit()
+    except Exception:
+        # Avoid using db.session outside of an application context here
+        # The error will be handled by normal Flask error handlers if it occurs later
+        pass
+
     return app
 
 @login_manager.user_loader

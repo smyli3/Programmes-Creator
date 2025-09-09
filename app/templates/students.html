@@ -1,0 +1,168 @@
+{% extends "base.html" %}
+
+{% block title %}Students{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>Students</h2>
+        <div>
+            <a href="{{ url_for('main.upload_file') }}" class="btn btn-primary">
+                <i class="fas fa-upload me-1"></i> Upload Students
+            </a>
+        </div>
+    </div>
+
+    <!-- Search and Filter -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <div class="row g-3">
+                <div class="col-md-4">
+                    <input type="text" id="searchInput" class="form-control" placeholder="Search students...">
+                </div>
+                <div class="col-md-3">
+                    <select id="abilityFilter" class="form-select">
+                        <option value="">All Abilities</option>
+                        {% for ability in abilities %}
+                            <option value="{{ ability }}">{{ ability }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <select id="groupFilter" class="form-select">
+                        <option value="">All Groups</option>
+                        {% for group in groups %}
+                            <option value="{{ group.id }}">{{ group.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <button id="resetFilters" class="btn btn-outline-secondary w-100">Reset</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {% if students %}
+        <div class="table-responsive">
+            <table class="table table-striped table-hover align-middle" id="studentsTable">
+                <thead class="table-light">
+                    <tr>
+                        <th>Name</th>
+                        <th>Ability</th>
+                        <th>Age</th>
+                        <th>Group</th>
+                        <th>Contact</th>
+                        <th>Emergency</th>
+                        <th>Medical Notes</th>
+                    </tr>
+                </thead>
+                <tbody>
+                {% for student in students %}
+                    {% set membership = student.active_membership() %}
+                    <tr data-ability="{{ student.ability_level|default('', true)|lower }}" 
+                        data-group="{{ membership.group_id if membership else '' }}"
+                        data-search="{{ [student.name, student.contact_email, student.emergency_contact, student.emergency_phone]|join(' ')|lower }}">
+                        <td>
+                            <div class="fw-bold">{{ student.name }}</div>
+                            <small class="text-muted">ID: {{ student.id }}</small>
+                        </td>
+                        <td>
+                            <span class="badge bg-primary">{{ student.ability_level or 'Not set' }}</span>
+                        </td>
+                        <td>
+                            {% if student.birth_date %}
+                                {{ ((now.date() - student.birth_date).days / 365)|round|int }} yrs
+                            {% else %}
+                                -
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if membership %}
+                                <span class="badge bg-info text-dark">{{ membership.group.name }}</span>
+                            {% else %}
+                                <span class="text-muted">Not assigned</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if student.contact_email %}
+                                <div><i class="fas fa-envelope me-1"></i> {{ student.contact_email }}</div>
+                            {% endif %}
+                            {% if student.parent_name %}
+                                <div class="small text-muted">Parent: {{ student.parent_name }}</div>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if student.emergency_contact or student.emergency_phone %}
+                                <div>{{ student.emergency_contact or 'Not provided' }}</div>
+                                <div class="small">{{ student.emergency_phone or '' }}</div>
+                            {% else %}
+                                <span class="text-muted">Not provided</span>
+                            {% endif %}
+                        </td>
+                        <td class="small">
+                            {% if student.food_allergy %}
+                                <div><span class="text-danger">Allergy:</span> {{ student.food_allergy }}</div>
+                            {% endif %}
+                            {% if student.medication %}
+                                <div><span class="text-warning">Medication:</span> {{ student.medication }}</div>
+                            {% endif %}
+                            {% if student.special_condition %}
+                                <div><span class="text-info">Notes:</span> {{ student.special_condition }}</div>
+                            {% endif %}
+                        </td>
+                    </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    {% else %}
+        <div class="alert alert-info">
+            <h4 class="alert-heading">No Students Found</h4>
+            <p>No students have been added yet. Upload a student file to get started.</p>
+        </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+<script>
+$(document).ready(function() {
+    // Search functionality
+    $('#searchInput').on('keyup', function() {
+        const searchText = $(this).val().toLowerCase();
+        filterStudents();
+    });
+
+    // Filter functionality
+    $('#abilityFilter, #groupFilter').on('change', filterStudents);
+    
+    // Reset filters
+    $('#resetFilters').on('click', function() {
+        $('#searchInput').val('');
+        $('#abilityFilter, #groupFilter').val('');
+        filterStudents();
+    });
+
+    function filterStudents() {
+        const searchText = $('#searchInput').val().toLowerCase();
+        const abilityFilter = $('#abilityFilter').val().toLowerCase();
+        const groupFilter = $('#groupFilter').val();
+
+        $('tbody tr').each(function() {
+            const $row = $(this);
+            const ability = $row.data('ability') || '';
+            const group = $row.data('group') || '';
+            const searchable = $row.data('search') || '';
+            
+            const matchesSearch = searchable.includes(searchText);
+            const matchesAbility = !abilityFilter || ability.includes(abilityFilter.toLowerCase());
+            const matchesGroup = !groupFilter || group === groupFilter;
+            
+            $row.toggle(matchesSearch && matchesAbility && matchesGroup);
+        });
+    }
+});
+</script>
+{% endblock %}

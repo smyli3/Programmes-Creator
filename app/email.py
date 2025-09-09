@@ -1,7 +1,7 @@
 from flask import current_app, render_template
 from flask_mail import Message
 from threading import Thread
-from . import mail
+from .extensions import mail
 
 def send_async_email(app, msg):
     """Send an email asynchronously."""
@@ -31,8 +31,8 @@ def send_email(to, subject, template, **kwargs):
     
     # In production, send the actual email
     msg = Message(
-        subject=app.config['MAIL_SUBJECT_PREFIX'] + ' ' + subject,
-        sender=app.config['MAIL_SENDER'],
+        subject=app.config.get('MAIL_SUBJECT_PREFIX', '') + ' ' + subject,
+        sender=app.config.get('MAIL_DEFAULT_SENDER'),
         recipients=[to]
     )
     

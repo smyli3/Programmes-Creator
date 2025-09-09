@@ -41,11 +41,13 @@ def register_commands(app):
             # Create admin user if it doesn't exist
             admin = User.query.filter_by(email=admin_email).first()
             if admin is None:
+                from datetime import datetime
                 admin = User(
                     username='admin',
                     email=admin_email,
-                    confirmed=True,
-                    is_admin=True
+                    is_admin=True,
+                    active=True,
+                    confirmed_at=datetime.utcnow()
                 )
                 if admin_password:
                     admin.set_password(admin_password)

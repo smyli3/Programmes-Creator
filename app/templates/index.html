@@ -46,7 +46,7 @@
                         </div>
                         <h5 class="card-title">Groups</h5>
                         <p class="card-text">Organize students into groups and assign instructors.</p>
-                        <a href="{{ url_for('main.groups') }}" class="btn btn-info text-white">View Groups</a>
+                        <a href="{{ url_for('main.groups_page') }}" class="btn btn-info text-white">View Groups</a>
                     </div>
                 </div>
             </div>
@@ -59,10 +59,10 @@
                 <a href="{{ url_for('main.upload_file') }}" class="btn btn-outline-primary">
                     <i class="fas fa-upload me-2"></i>Upload Student Data
                 </a>
-                <a href="{{ url_for('main.create_program') }}" class="btn btn-outline-success">
+                <a href="{{ url_for('main.programs') }}" class="btn btn-outline-success">
                     <i class="fas fa-plus me-2"></i>Create New Program
                 </a>
-                <a href="{{ url_for('main.create_group') }}" class="btn btn-outline-info">
+                <a href="{{ url_for('main.groups_page') }}" class="btn btn-outline-info">
                     <i class="fas fa-users me-2"></i>Create New Group
                 </a>
             </div>

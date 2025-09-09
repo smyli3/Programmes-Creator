@@ -1,0 +1,81 @@
+{% extends "base.html" %}
+
+{% block title %}Upload Student Data{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-lg-8">
+    <div class="card shadow-sm">
+      <div class="card-body p-4">
+        <h3 class="mb-3">Upload Student Data</h3>
+        <p class="text-muted">Upload a CSV or Excel file to add/update students for a program. You can select an existing program or create a new one.</p>
+
+        <form id="uploadForm" class="needs-validation" method="POST" action="{{ url_for('main.upload_file') }}" enctype="multipart/form-data" novalidate>
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+          <!-- Program Selection -->
+          <div class="mb-3">
+            <label for="program_id" class="form-label">Select Existing Program</label>
+            <select class="form-select" id="program_id" name="program_id">
+              <option value="">-- None / Create New --</option>
+              {% for p in programs %}
+                <option value="{{ p.id }}">{{ p.name }}</option>
+              {% endfor %}
+            </select>
+            <div class="form-text">Choose a program to add students to, or leave blank and enter a new program name below.</div>
+          </div>
+
+          <!-- New Program Name -->
+          <div class="mb-3">
+            <label for="program_name" class="form-label">New Program Name (optional)</label>
+            <input type="text" class="form-control" id="program_name" name="program_name" placeholder="e.g., Ride Tribe 2025">
+            <div class="form-text">If provided and no existing program is selected, a new program will be created.</div>
+          </div>
+
+          <!-- File Input -->
+          <div class="mb-4">
+            <label for="fileInput" class="form-label">Student Data File</label>
+            <input class="form-control" type="file" id="fileInput" name="file" accept=".csv,.xlsx,.xls" required>
+            <div class="invalid-feedback">Please choose a .csv, .xlsx or .xls file.</div>
+          </div>
+
+          <!-- Duplicate Handling Strategy -->
+          <div class="mb-4">
+            <label class="form-label">When a student already exists</label>
+            <div class="form-text mb-2">Choose how to handle existing students detected by Customer ID, Email, or Name + DOB.</div>
+            <div class="form-check">
+              <input class="form-check-input" type="radio" name="duplicate_strategy" id="dupSkip" value="skip" checked>
+              <label class="form-check-label" for="dupSkip">Skip existing records</label>
+            </div>
+            <div class="form-check">
+              <input class="form-check-input" type="radio" name="duplicate_strategy" id="dupUpdate" value="update">
+              <label class="form-check-label" for="dupUpdate">Update existing records</label>
+            </div>
+            <div class="form-check">
+              <input class="form-check-input" type="radio" name="duplicate_strategy" id="dupDuplicate" value="duplicate">
+              <label class="form-check-label" for="dupDuplicate">Allow duplicates (create new)</label>
+            </div>
+          </div>
+
+          <div class="d-flex gap-2">
+            <button type="submit" class="btn btn-primary">
+              <i class="fas fa-upload me-2"></i>Upload and Process
+            </button>
+            <a href="{{ url_for('main.index') }}" class="btn btn-outline-secondary">Cancel</a>
+          </div>
+        </form>
+
+        <hr class="my-4">
+        <div>
+          <h5>Formatting tips</h5>
+          <ul class="mb-0">
+            <li>Accepted formats: CSV, XLSX, XLS.</li>
+            <li>Common columns: student_id/id, customer_id, name, birth_date, ability_level, contact_email, emergency_contact, emergency_phone, notes (flexible).</li>
+            <li>Headers are case-insensitive; unknown columns are ignored.</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -69,6 +69,9 @@ class Program(db.Model):
     name = db.Column(db.String(128), index=True)
     description = db.Column(db.Text)
     created_at = db.Column(db.DateTime, index=True, default=datetime.utcnow)
+    # Weekly tracking
+    max_weeks = db.Column(db.Integer, default=6, nullable=False)
+    current_week = db.Column(db.Integer, default=1, nullable=False)
     active = db.Column(db.Boolean, default=True)
     
     # Relationships
@@ -96,14 +99,29 @@ class Student(db.Model):
     memberships = db.relationship('Membership', backref='student', lazy='dynamic')
     notes = db.relationship('Note', backref='student', lazy='dynamic')
 
+    @property
+    def age(self):
+        """Compute age in years from birth_date. Returns None if missing."""
+        if not self.birth_date:
+            return None
+        try:
+            from datetime import date
+            today = date.today()
+            years = today.year - self.birth_date.year - ((today.month, today.day) < (self.birth_date.month, self.birth_date.day))
+            return years
+        except Exception:
+            return None
+
 class Group(db.Model):
     """Group model for student groups."""
     __tablename__ = 'groups'
     id = db.Column(db.String(36), primary_key=True)
     name = db.Column(db.String(128), index=True)
     program_id = db.Column(db.String(36), db.ForeignKey('programs.id'))
-    instructor = db.Column(db.String(128))
     notes = db.Column(db.Text)
+    ability_level = db.Column(db.String(64))
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    max_size = db.Column(db.Integer, default=8)
     
     # Relationships
     members = db.relationship('Membership', backref='group', lazy='dynamic')
@@ -114,9 +132,38 @@ class Membership(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     student_id = db.Column(db.String(36), db.ForeignKey('students.id'))
     group_id = db.Column(db.String(36), db.ForeignKey('groups.id'))
+    # Week tracking
+    week_number = db.Column(db.Integer)
     joined_at = db.Column(db.DateTime, default=datetime.utcnow)
     left_at = db.Column(db.DateTime)
     is_active = db.Column(db.Boolean, default=True)
+
+class WeeklyGroupName(db.Model):
+    """Per-week group naming overlay."""
+    __tablename__ = 'weekly_group_names'
+    id = db.Column(db.Integer, primary_key=True)
+    group_id = db.Column(db.String(36), db.ForeignKey('groups.id'), nullable=False)
+    week_number = db.Column(db.Integer, nullable=False)
+    name = db.Column(db.String(100), nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    __table_args__ = (
+        db.UniqueConstraint('group_id', 'week_number'),
+        db.Index('ix_weekly_group_names_lookup', 'group_id', 'week_number'),
+    )
+
+class WeeklyInstructorAssignment(db.Model):
+    """Per-week instructor assignment for a group."""
+    __tablename__ = 'weekly_instructor_assignments'
+    id = db.Column(db.Integer, primary_key=True)
+    group_id = db.Column(db.String(36), db.ForeignKey('groups.id'), nullable=False)
+    week_number = db.Column(db.Integer, nullable=False)
+    instructor_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)
+    assigned_at = db.Column(db.DateTime, default=datetime.utcnow)
+    instructor = db.relationship('User')
+    __table_args__ = (
+        db.UniqueConstraint('group_id', 'week_number'),
+        db.Index('ix_weekly_instructor_assignments_lookup', 'group_id', 'week_number'),
+    )
 
 class Movement(db.Model):
     """Tracks student movements between groups."""

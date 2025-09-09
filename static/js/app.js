@@ -387,7 +387,7 @@ function initEventListeners() {
     document.querySelectorAll('.view-notes-btn').forEach(button => {
         button.addEventListener('click', handleViewNotes);
     });
-});
+}
 
 // Show a flash message
 document.addEventListener('DOMContentLoaded', function() {
